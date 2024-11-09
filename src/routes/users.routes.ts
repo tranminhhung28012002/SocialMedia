@@ -1,4 +1,4 @@
-import { changePasswordValidator, followValidator, refreshTokenValidator, unfollowValidator } from './../middlewares/users.middlewares'
+import { changePasswordValidator, followValidator, unfollowValidator } from './../middlewares/users.middlewares'
 import { wrapRequestHandler } from './../../utils/handlerl'
 import { validate } from './../../utils/validation'
 import {
@@ -11,7 +11,6 @@ import {
   getUsersForFollow,
   loginController,
   logoutController,
-  refreshTokenController,
   registerController,
   resendverifyEmailController,
   resetPasswordController,
@@ -50,5 +49,71 @@ UserRouter.post('/logout', accessTokenValidatetor, wrapRequestHandler(logoutCont
 
 UserRouter.post('/verify-email', emailVerifyTokenValidator, wrapRequestHandler(verifyEmailController))
 
+UserRouter.post('/resend-verify-email', accessTokenValidatetor, wrapRequestHandler(resendverifyEmailController))
+
+UserRouter.post('/resend-forgot-password', forgotPasswordValidator, wrapRequestHandler(forgotPasswordController))
+
+UserRouter.post(
+  '/verify-forgot-password',
+  verifyForgotPasswordTokenValidator,
+  wrapRequestHandler(verifyForgotPasswordController)
+)
+
+UserRouter.post('/reset-password', resetPasswordTokenValidator, wrapRequestHandler(resetPasswordController))
+
+UserRouter.get('/me', accessTokenValidatetor, wrapRequestHandler(getMeController))
+
+// Định nghĩa route lấy profile qua _id
+UserRouter.get('/profile/:_id', wrapRequestHandler(getProfileController))
+
+// Đăng ký route cho việc lấy danh sách người dùng
+UserRouter.get('/listUsers', getListUsersController)
+// Đăng ký route cho việc lấy thông tin người dùng theo _id
+UserRouter.get('/list/users/:_id', getProfileController)
+
+UserRouter.patch(
+  '/me',
+  accessTokenValidatetor,
+  verifiedUserValidator,
+  updateMeValidator,
+  filterMiddleware<UpdateMeReqBody>([
+    //dùng để lọc ra những trường không được khai báo bên trong và chỉ lấy những trường khai báo
+    'name',
+    'date_of_birth',
+    'bio',
+    'location',
+    'website',
+    'username',
+    'avatar',
+    'cover_photo'
+  ]),
+  wrapRequestHandler(updateMeController)
+)
+
+UserRouter.get('/follow-list', accessTokenValidatetor, wrapRequestHandler(getUsersForFollow)) //lấy ds tất cả người dùng và đưa lên giao diện để hiện trên follow
+
+UserRouter.post(
+  '/follow',
+  accessTokenValidatetor,
+  verifiedUserValidator,
+  followValidator,
+  wrapRequestHandler(followController)
+)
+
+UserRouter.delete(
+  '/follow/:user_id',
+  accessTokenValidatetor,
+  verifiedUserValidator,
+  unfollowValidator,
+  wrapRequestHandler(unfollowController)
+)
+
+UserRouter.put(
+  '/change-password',
+  accessTokenValidatetor,
+  verifiedUserValidator,
+  changePasswordValidator,
+  wrapRequestHandler(changePasswordController)
+)
 
 export default UserRouter
