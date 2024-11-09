@@ -6,7 +6,6 @@ import {
   forgotPasswordReqBody,
   LoginReqBody,
   LogoutReqBody,
-  refreshTokenBody,
   RegisterReqBody,
   ResetPasswordReqBody,
   TokenPayload,
@@ -21,7 +20,6 @@ import HTTP_STATUS from '../constants/httpStatus'
 import databaseService from '../services/database.services'
 import { UserVerifyStatus } from '../constants/enums'
 import User from '../models/schemas/User.schema'
-import nodemailer from 'nodemailer'
 
 //CustomRequest<LoginReqBody> là mở rộng của Request có thể dùng nó hoặc req: Request<ParamsDictionary, any, LoginReqBody>
 export const loginController = async (req: CustomRequest<LoginReqBody>, res: Response) => {
@@ -30,8 +28,8 @@ export const loginController = async (req: CustomRequest<LoginReqBody>, res: Res
   const { access_token, refregh_token } = await usersService.login({ user_id: user_id.toString(), verify: user.verify })
   // Lưu access token vào cookie tại đây
   res.cookie('access_token', access_token, {
-    httpOnly: false,
-    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     maxAge: parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN || '3600') * 1000
   })
   return res.json({
@@ -40,13 +38,6 @@ export const loginController = async (req: CustomRequest<LoginReqBody>, res: Res
     refregh_token
   })
 }
-const transporter = nodemailer.createTransport({
-  service: 'Gmail',
-  auth: {
-    user: process.env.MAIL_USERNAME,
-    pass: process.env.MAIL_PASSWORD
-  }
-})
 
 export const registerController = async (
   // khi người dùng gửi một yêu cầu HTTP đến endpoint đăng ký, dữ liệu mà họ nhập vào và gửi sẽ đc lưu req.body
@@ -54,17 +45,11 @@ export const registerController = async (
   res: Response,
   next: NextFunction
 ) => {
+  // throw new Error('test err')
+  // const { email, password, data_of_birth, confirm_password, name } = req.body //body có kiểu RegisterReqBody được khai baó thành interface để lấy ra các trường dử liệu
+
   //bên users.services dùng asyn thì khi gọi sang bên này thì phải dùng await
   const result = await usersService.register(req.body)
-  // Gửi email xác thực
-  const mailOptions = {
-    from: process.env.MAIL_USERNAME,
-    to: req.body.email,
-    subject: 'Xác thực tài khoản của bạn',
-    text: `Chào ${req.body.name}, vui lòng xác thực tài khoản của bạn bằng cách nhấp vào liên kết sau: ${process.env.FRONTEND_URL}/verify-email?token=${result.email_verify_token}`
-  }
-  //cấu hình gửi email
-  await transporter.sendMail(mailOptions)
   return res.json({
     message: USERS_MESSAGES.REGISTER_SUCCESS,
     result
@@ -90,7 +75,7 @@ export const logoutController = async (req: CustomRequest<LogoutReqBody>, res: R
 }
 
 export const verifyEmailController = async (req: CustomRequest, res: Response, next: NextFunction) => {
-  const { user_id } = req.decoded_email_verify_tokens as TokenPayload
+  const { user_id } = req.decoded_email_verify_tokens
   const user = await databaseService.users.findOne({
     _id: new ObjectId(user_id)
   })
@@ -113,7 +98,6 @@ export const verifyEmailController = async (req: CustomRequest, res: Response, n
     result
   })
 }
-
 //khi người dùng muốn gửi lại email xác thực thì chạy link này
 export const resendverifyEmailController = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { decoded_authorization } = req
@@ -142,17 +126,6 @@ export const forgotPasswordController = async (
 ) => {
   const { _id, verify } = req.user as User
   const result = await usersService.forgotPassword({ user_id: (_id as ObjectId).toString(), verify })
-  // Cấu hình email
-  const mailOptions = {
-    from: process.env.MAIL_USERNAME,
-    to: req.body.email,
-    subject: 'Xác thực tài khoản của bạn để đổi mật khẩu',
-    text: `Chào ${req.user.name}, vui lòng xác thực tài khoản của bạn bằng cách nhấp vào liên kết sau: ${process.env.FRONTEND_URL}/verify-forgot-password?token=${result.forgot_password_token}`
-  }
-
-  // Gửi email
-  await transporter.sendMail(mailOptions)
-
   return res.json(result)
 }
 
@@ -273,15 +246,4 @@ export const changePasswordController = async (
   const { password } = req.body
   const result = await usersService.changePassword(user_id, password)
   return res.json(result)
-}
-
-export const refreshTokenController = async (req: CustomRequest<refreshTokenBody>, res: Response) => {
-  const { refresh_token } = req.body // Correct: refresh_token
-  const { user_id, verify } = req.decoded_refresh_token as TokenPayload
-
-  const result = await usersService.refeshToken({ user_id, verify, refersh_token: refresh_token })
-  return res.json({
-    message: USERS_MESSAGES.REFERSH_TOKEN_SUCCES,
-    result
-  })
 }
