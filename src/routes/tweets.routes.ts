@@ -6,7 +6,6 @@ import {
 import { Router } from 'express'
 import { wrapRequestHandler } from '../../utils/handlerl'
 import {
-  content,
   createTweetController,
   getAllTweetUser,
   getNewFeedsController,
@@ -119,5 +118,4 @@ tweetsRouter.get(
   wrapRequestHandler(getReTweetController)
 )
 
-tweetsRouter.post('/content-sugettion', wrapRequestHandler(content))
 export default tweetsRouter
