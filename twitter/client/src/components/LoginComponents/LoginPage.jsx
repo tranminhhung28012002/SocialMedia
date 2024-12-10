@@ -1,70 +1,57 @@
-import { Form, Input, message, Typography } from 'antd'
+import { Form, Input, Typography } from 'antd'
+import { toast } from 'react-toastify'
 import Link from '../Link.jsx'
 import Button from '../Button.jsx'
 import { axiosInstance } from '../../axios.js'
 import { useAuth } from '../../store.js'
 import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 
 const { Title } = Typography
 
 const LoginPage = () => {
   const [form] = Form.useForm()
-  const [messageApi, contextHolder] = message.useMessage()
-  const { setUser, user } = useAuth()
-  console.log(user)
+  const { setUser } = useAuth()
   const navigate = useNavigate()
+  const [err, setErr] = useState('')
+  const handleSubmit = async (values) => {
+    try {
+      const adminLoginResponse = await axiosInstance.post('/admin/login', values)
+      localStorage.setItem('access_token', adminLoginResponse.data.result.access_token)
+      localStorage.setItem('refresh_token', adminLoginResponse.data.result.refresh_token)
+      const adminInfoResponse = await axiosInstance.get('/me')
+      const adminData = adminInfoResponse.data.result
+      setUser(adminData)
+      setTimeout(() => {
+        navigate('/admin')
+      }, 2000) // điều chỉnh lại
+    } catch {
+      try {
+        const userLoginResponse = await axiosInstance.post('/api/login', values)
+        localStorage.setItem('access_token', userLoginResponse.data.access_token)
+        localStorage.setItem('refresh_token', userLoginResponse.data.refresh_token)
 
-  const handleSubmit = (values) => {
-    // Thử đăng nhập với API user thường trước
-    axiosInstance
-      .post('/api/login', values)
-      .then((res) => {
-        localStorage.setItem('access_token', res.data.access_token)
-        localStorage.setItem('refregh_token', res.data.refregh_token)
-        axiosInstance
-          .get('/api/me')
-          .then((res) => {
-            const userData = res.data.result
-            setUser(userData)
-            if (!userData.role) {
-              navigate('/home')
-            } else {
-              navigate('/admin')
-            }
-          })
-          .catch((error) => {
-            console.log(error)
-          })
-      })
-      .catch((userError) => {
-        console.log(userError)
-        messageApi.error('Login failed for user. Trying admin login...')
-        axiosInstance
-          .post('/admin/login', values)
-          .then((res) => {
-            localStorage.setItem('access_token', res.data.access_token)
-            //đoạn này có thể thêm api lấy thông tin admin để view ra
-            navigate('/admin')
-          })
-          .catch((adminError) => {
-            console.log(adminError)
-
-            // Hiển thị lỗi nếu cả hai API đều thất bại
-            for (const key of Object.keys(adminError?.response?.data?.errors || {})) {
-              messageApi.error(adminError?.response?.data?.errors[key].msg, 2)
-            }
-          })
-      })
+        toast.success('Đăng nhập User thành công!')
+        const userInfoResponse = await axiosInstance.get('/api/me')
+        const userData = userInfoResponse.data.result
+        setUser(userData)
+        setTimeout(() => {
+          navigate('/home')
+        }, 2000)
+      } catch (userError) {
+        setErr(userError?.response?.data?.errors.email.msg)
+      }
+    }
   }
 
   return (
-    <main className='flex overflow-hidden items-center justify-around text-lg bg-white'>
-      <img loading='lazy' src='./images/VAlogin.svg' className='object-cover' alt='Twitter logo' />
-      <div className='flex flex-col max-w-full w-[450px]'>
-        {contextHolder}
+    <main className='flex overflow-hidden items-center text-lg bg-white'>
+      <img loading='lazy' src='./images/VAsocial.svg' className='object-cover w-[60%]' alt='Twitter logo' />
+      <div className='flex flex-col w-[450px] bg-slate-200 p-5 rounded-md'>
         <Title level={1} className='self-start mt-9 text-5xl font-black text-black max-md:ml-2.5'>
           Log in to VAsocial
         </Title>
+        {err && <p className='text-red-500'>{err}</p>}
         <Form form={form} onFinish={handleSubmit}>
           <Form.Item
             name='email'
