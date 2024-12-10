@@ -1,37 +1,40 @@
-import { DatePicker, Form, Input, message, Typography } from 'antd'
+import { DatePicker, Form, Input, Typography } from 'antd'
+import { toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import Button from '../Button'
 import Link from '../Link'
 import { axiosInstance } from '../../axios'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
+
 const { Title } = Typography
 
 const RegisterPage = () => {
   const [form] = Form.useForm()
-  const [messageApi, contextHolder] = message.useMessage()
   const navigate = useNavigate()
+
   const handleSubmit = (values) => {
     values.date_of_birth = values.date_of_birth.toDate()
 
     console.log('Form values:', values)
-    axiosInstance
-      .post('/api/register', values)
-      .then((res) => {
-        messageApi.success('Đã đăng ký tài khoản thành công')
-        navigate('/login')
+    axios
+      .post('http://localhost:3000/api/register', values)
+      .then(() => {
+        toast.success('Đăng ký tài khoản thành công!')
+        setTimeout(() => navigate('/login'), 2000)
       })
       .catch((error) => {
-        console.log(error)
-        messageApi.error('Đã có lỗi xảy ra')
-        for (const key of Object.keys(error?.response?.data?.errors)) {
-          messageApi.error(error?.response?.data?.errors[key].msg, 2)
-        }
+        console.error(error)
+        toast.error('Đã có lỗi xảy ra trong quá trình đăng ký.')
+        const errors = error?.response?.data?.errors || {}
+        console.log('err', errors)
+        Object.values(errors).forEach((err) => toast.error(err.msg))
       })
   }
 
   return (
-    <main className='flex overflow-auto justify-around items-center px-20 text-lg bg-white   h-[100vh]'>
+    <main className='flex overflow-auto justify-around items-center px-20 text-lg bg-white h-[100vh]'>
       <div className='flex flex-col max-w-full w-[450px]'>
-        {contextHolder}
         <Title level={1} className='self-start mt-9 text-5xl font-black text-black max-md:ml-2.5'>
           Register to Twitter
         </Title>
@@ -57,15 +60,11 @@ const RegisterPage = () => {
           <Form.Item name='password' rules={[{ required: true, message: 'Please input your password!' }]}>
             <Input type='password' placeholder='Password' className='mt-4 h-16' aria-label='Password' />
           </Form.Item>
-          <Form.Item name='confirm_password' rules={[{ required: true, message: 'Please input your password!' }]}>
+          <Form.Item name='confirm_password' rules={[{ required: true, message: 'Please confirm your password!' }]}>
             <Input type='password' placeholder='Confirm Password' className='mt-4 h-16' aria-label='Password' />
           </Form.Item>
           <Form.Item>
-            <Button
-              className='mt-4 w-full h-12
-            '
-              htmlType='submit'
-            >
+            <Button className='mt-4 w-full h-12' htmlType='submit'>
               Register
             </Button>
           </Form.Item>
