@@ -3,7 +3,6 @@ import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Button from '../Button'
 import Link from '../Link'
-import { axiosInstance } from '../../axios'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
