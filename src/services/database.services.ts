@@ -3,7 +3,6 @@ import { MongoClient, Db, Collection } from 'mongodb'
 import User from '../models/schemas/User.schema'
 import RefreshToken from '../models/schemas/ResfestToken.Schema'
 import Followers from '../models/schemas/Follower.schema'
-import VideoStatus from './../models/schemas/VideoStatus.schema'
 import Tweet from '../models/schemas/Tweet.shema'
 import Hashtag from '../models/schemas/Hashtag.schema'
 import Bookmark from '../models/schemas/Bookmark.schema'
@@ -12,7 +11,7 @@ import Conversation from '../models/schemas/Conversations.schema'
 import ImageStatus from '../models/schemas/ImageStatus.schema'
 import Reports from '../models/schemas/report.schema'
 import Notification from '../models/schemas/Notifications.schema'
-import Admin from '../models/schemas/Admin.schema'
+import Admin from '../models/schemas/admin.schema'
 
 config() // config(): Chức năng này đọc tệp .env và làm cho nội dung của nó có sẵn thông qua process.env
 
