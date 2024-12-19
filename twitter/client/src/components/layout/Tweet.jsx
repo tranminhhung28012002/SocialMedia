@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { message, Tag } from 'antd'
 import Report from './Report'
 import { toast } from 'react-toastify'
+import socket from '../../socket'
 function Tweet({
   id,
   user_id,
@@ -20,6 +21,7 @@ function Tweet({
   avatar,
   isChildTweet
 }) {
+  const userId = user_id
   const [messageApi, contextHolder] = message.useMessage()
   const [isLiked, setIsLiked] = useState(false) // Trạng thái like
   const [isBookmarked, setIsBookmarked] = useState(false) // Trạng thái để kiểm tra nếu tweet đã được bookmark
@@ -34,12 +36,12 @@ function Tweet({
         setReload((prev) => !prev)
         setTimeout(() => {
           toast.success('đã unlike bài viết')
-        }, 2000)
+        }, 1000)
       } else {
         // Nếu chưa like, gọi API để like
         await axiosInstance.post('/likes', { tweet_id: id })
         await axiosInstance.post('/createNotification', { TweetId: id, ownerId: user_id, actionType: 'like' })
-
+        socket.emit('getNotifications', { user_id: user_id })
         setIsLiked(true)
         setReload((prev) => !prev) // Cập nhật lại dữ liệu
         setTimeout(() => {
@@ -57,17 +59,15 @@ function Tweet({
         // Nếu đã bookmark, gọi API để xóa bookmark
         await axiosInstance.delete(`/bookmarks/tweets/${id}`)
         setIsBookmarked(false)
-        setTimeout(() => {
-          toast.success('Đã xóa tweet khỏi danh sách bookmark')
-        }, 2000)
       } else {
         // Nếu chưa bookmark, gọi API để thêm bookmark
         await axiosInstance.post('/bookmarks', { tweet_id: id })
         await axiosInstance.post('/createNotification', { TweetId: id, ownerId: user_id, actionType: 'bookmark' })
+        socket.emit('getNotifications', { user_id: user_id })
         setIsBookmarked(true)
         setTimeout(() => {
           toast.success('Đã thêm tweet vào danh sách bookmark')
-        }, 2000)
+        }, 1000)
       }
       setReload((prev) => !prev) // Cập nhật lại dữ liệu
     } catch (error) {
@@ -81,6 +81,7 @@ function Tweet({
   const closeReport = () => {
     setReport(false)
   }
+
   return (
     <article className='flex flex-col pl-px w-full max-w-[598px] max-md:max-w-full'>
       {contextHolder}
@@ -88,12 +89,17 @@ function Tweet({
         <div className='flex shrink-0 h-px bg-gray-200 max-md:max-w-full' />
       </div>
       <div className='flex flex-wrap gap-2.5 pr-px pl-4 mt-2.5 w-full max-w-[584px] max-md:max-w-full'>
-        <div className='flex grow shrink items-start h-full w-[39px]'>
+        <div
+          className='flex grow shrink items-start h-full w-[39px] cursor-pointer'
+          onClick={() => {
+            navigate('/profile/' + userId)
+          }}
+        >
           <img
             loading='lazy'
-            src={avatar ? avatar : '/images/user-avatar.jpg'}
+            src={avatar ? avatar : '/images/iconavatar.jpg'}
             alt={author}
-            className='object-contain aspect-square rounded-[99999px] w-[49px]'
+            className='object-cover aspect-square rounded-[99999px] w-[49px]'
           />
         </div>
         <div className='flex flex-col grow shrink self-start min-w-[240px] w-[499px] max-md:max-w-full'>
@@ -111,7 +117,7 @@ function Tweet({
             {content}
           </p>
           {report && <Report tweetID={id} onClose={closeReport} />}
-          {isDetail && image ? (
+          {Array.isArray(image) ? (
             image.map((url, index) => (
               <div key={index}>
                 {url?.includes('image') && (

@@ -1,34 +1,34 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { axiosInstance } from '../../axios'
 import { useAuth } from '../../store'
 import { Avatar, message, Modal } from 'antd'
 import { UserOutlined } from '@ant-design/icons'
-
-const whoToFollowItems = [
-  {
-    name: 'Bessie Cooper',
-    handle: '@alessandroveronezi',
-    avatar: '/images/bessie-cooper.jpg'
-  },
-  {
-    name: 'Jenny Wilson',
-    handle: '@gabrielcantarin',
-    avatar: '/images/jenny-wilson.jpg'
-  }
-]
+import { useNavigate } from 'react-router-dom'
 
 function WhoToFollow() {
   const [users, setUsers] = useState([])
   const [openModal, setOpenModal] = useState(false)
   const { user } = useAuth()
+  const navigate = useNavigate()
   useEffect(() => {
-    axiosInstance.get('/api/listUsers').then((res) => {
-      setUsers(res.data.result.filter((v) => v.email !== user.email))
-    })
-  }, [])
+    const fetchData = async () => {
+      try {
+        const userRes = await axiosInstance.get('/api/listUsers')
+        const allUsers = userRes.data.result
+        const followRes = await axiosInstance.get(`/api/followers/${user._id}`)
+        const followList = followRes.data.result.map((follower) => follower._id)
+        const filteredUsers = allUsers.filter((u) => u._id !== user._id && !followList.includes(u._id))
+        setUsers(filteredUsers)
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      }
+    }
+
+    fetchData()
+  }, [user])
   const [messageApi, contextHolder] = message.useMessage()
   return (
-    <div className='flex overflow-hidden flex-col mt-4 w-full rounded-2xl bg-slate-50 max-w-[350px]'>
+    <div className='flex overflow-hidden flex-col mt-4 w-full rounded-2xl bg-slate-50 '>
       {contextHolder}
       <Modal
         title='All user'
@@ -40,9 +40,14 @@ function WhoToFollow() {
       >
         <div className='overflow-scroll p-4'>
           {users.map((item, index) => (
-            <div key={index} className='flex flex-col pt-2.5 w-full'>
+            <div key={index} className='flex flex-col pt-2.5 w-full hover:bg-gray-200'>
               <div className='flex gap-5 justify-between mx-4 max-md:mx-2.5'>
-                <div className='flex gap-2.5 text-base'>
+                <div
+                  className='flex gap-2.5 text-base cursor-pointer'
+                  onClick={() => {
+                    navigate('/profile/' + item._id)
+                  }}
+                >
                   {item.avatar ? (
                     <Avatar icon={<img src={item.avatar} />} className='mr-4' />
                   ) : (
@@ -54,16 +59,8 @@ function WhoToFollow() {
                   </div>
                 </div>
                 <button
-                  onClick={async () => {
-                    try {
-                      await axiosInstance.post('/api/follow', { followed_user_id: item._id })
-                      messageApi.success('Đã follow thành công')
-                    } catch (error) {
-                      console.log(error)
-                      messageApi.error('Đã có lỗi xảy ra')
-                    }
-                  }}
                   className='overflow-hidden self-stretch px-4 py-1.5 my-auto text-base font-bold leading-none text-center text-sky-500 whitespace-nowrap rounded-full border border-sky-500 border-solid min-h-[30px]'
+                  onClick={() => axiosInstance.post('/api/follow', { followed_user_id: users[index]._id })}
                 >
                   Follow
                 </button>
@@ -78,9 +75,14 @@ function WhoToFollow() {
         <div className='flex shrink-0 mt-2.5 h-px bg-gray-200' />
       </div>
       {users.slice(0, 2).map((item, index) => (
-        <div key={index} className='flex flex-col pt-2.5 w-full'>
+        <div key={index} className='flex flex-col pt-2.5 w-full hover:bg-gray-200'>
           <div className='flex gap-5 justify-between mx-4 max-md:mx-2.5'>
-            <div className='flex gap-2.5 text-base'>
+            <div
+              className='flex gap-2.5 text-base cursor-pointer'
+              onClick={() => {
+                navigate('/profile/' + item._id)
+              }}
+            >
               {item.avatar ? (
                 <Avatar icon={<img src={item.avatar} />} className='mr-4' />
               ) : (
