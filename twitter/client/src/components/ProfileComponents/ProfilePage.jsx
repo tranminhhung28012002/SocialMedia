@@ -1,119 +1,104 @@
-import { IoMdArrowRoundBack } from 'react-icons/io'
-import { FaBellSlash, FaCalendarAlt, FaEnvelope, FaLink, FaMapMarkerAlt, FaRegBell } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
-
-import { LuMoreHorizontal } from 'react-icons/lu'
-import { useNavigate } from 'react-router-dom'
 import { axiosInstance } from '../../axios'
+import moment from 'moment'
+import ProfileBanner from './ProfileBanner'
+import ProfileHeader from './ProfileHeader'
+import ProfileInfo from './ProfileInfo'
+import ProfileTabs from './ProfileTabs'
+import ChildTweet from '../layout/ChildTweet'
+import Tweet from '../layout/Tweet'
+import FeaturesProfile from './FeaturesProfile'
+import { useParams } from 'react-router-dom'
 
 export default function ProfilePage() {
-  const navigate = useNavigate()
-  const [profilePage, setProfilePage] = useState()
-  const [Follow, setFollow] = useState(false)
-  const handleFollow = () => {
-    setFollow(!Follow)
-  }
-  const [notify, setNotify] = useState(false)
-  const handleNotify = () => {
-    setNotify(!notify)
-  }
+  const { user_id } = useParams()
+  console.log(user_id)
+  const [tweets, setTweets] = useState([])
+  const [userId, setUserId] = useState([])
+  const [reload, setReload] = useState(false)
+  console.log(tweets)
   useEffect(() => {
-    const fetchSenderInfo = async () => {
+    const fetchProfileAndTweets = async () => {
       try {
-        axiosInstance.get('api/list/users').then((res) => {
-          setProfilePage(
-            res.data.result.map((v) => {
-              return {
-                name: v.name,
-                email: v.email,
-                date_of_birth: v.date_of_birth,
-                avatar: v.avatar,
-                created_at: v.created_at
-              }
-            })
-          )
-        })
-      } catch (err) {
-        console.log('loi data ', err.data)
+        const profileRes = await axiosInstance.get(`/api/profile/${user_id}`)
+        setTweets(profileRes.data.result)
+        const tweetsRes = await axiosInstance.get('/tweets/user/' + user_id, { params: { page: 1, limit: 100 } })
+        setUserId(
+          tweetsRes.data.result.tweets.map((v) => ({
+            ...v,
+            id: v._id,
+            avatar: profileRes.data.result?.avatar,
+            author: profileRes.data.result?.name,
+            handle: '@' + profileRes.data.result?.username,
+            time: moment(v.created_at).format('DD/MM/YYYY HH:mm'),
+            content: v.content,
+            image: v.medias[0]?.url || null,
+            stats: {
+              comments: v.comment_count,
+              retweets: v.retweet_count,
+              likes: v.likes,
+              views: v.bookmarks
+            }
+          }))
+        )
+      } catch (error) {
+        console.error('Error fetching profile or tweets:', error)
       }
     }
-    fetchSenderInfo()
-  }, [])
+    fetchProfileAndTweets()
+  }, [user_id, reload])
 
   return (
-    <div className='w-[613px] border-l border-r border-[#2f3336]'>
-      {profilePage.map((v) => (
-        <div key={v.id}>
-          <div className='flex items-center px-4 py-2 border-b border-[#2f3336]'>
-            <IoMdArrowRoundBack className='mr-5 cursor-pointer text-white p-2 hover:bg-[#2f3336] rounded-full' />
-            <div>
-              <h2 className='text-lg font-bold leading-6 text-white'>{v.name}</h2>
-              <span className='text-sm text-[#6e767d]'>1 post</span>
-            </div>
+    <main className='flex overflow-hidden flex-col bg-white max-md:px-5 border-x'>
+      <div className='flex overflow-hidden flex-col self-center px-px max-w-full w-[600px]'>
+        <div className='flex flex-col pb-4 w-full max-md:max-w-full relative '>
+          <ProfileBanner src={tweets.cover_photo || './images/iconavatar.jpg'} />
+          <div className='mb-9'>
+            <ProfileHeader avatarSrc={tweets.avatar || './images/iconavatar.jpg'} />
+            <FeaturesProfile reiceiverId={user_id} />
           </div>
-          <div className='relative bg-[#494b4b] h-[200px] overflow-hidden'>
-            <img src={v.avatar} className='w-full object-cover' />
-          </div>
-          <div className='p-4 relative'>
-            <img
-              src={v.avatar}
-              alt='Avatar'
-              className='w-[134px] h-[134px] rounded-full border-4 border-black absolute top-[-75px] left-4'
-            />
-            <h1 className='mt-[85px] mb-0 text-lg font-bold leading-6 text-white'>{v.name}</h1>
-            <p className='text-[#6e767d] mt-1 text-sm leading-5'>{v.email}</p>
-            <p className='text-[#6e767d] mt-4'>You’re gonna leave here in a whole lot of pain 😣</p>
-            <div className='flex flex-wrap gap-4 mt-4 text-[#6e767d] text-sm leading-3'>
-              <span className='flex items-center gap-1'>
-                <FaMapMarkerAlt /> Follow my new account
-              </span>
-              <span className='flex items-center gap-1'>
-                <FaLink />{' '}
-                <a href='http://vuighe.net' className='text-[#1da1f2]'>
-                  http://vuighe.net
-                </a>
-              </span>
-              <span className='flex items-center gap-1'>
-                <FaCalendarAlt /> {v.created_at}
-              </span>
-            </div>
-          </div>
-          <div className='flex gap-5 mt-4 text-sm leading-3'>
-            <span className='text-[#6e767d]'>
-              <strong className='text-white'>200</strong> Following
-            </span>
-            <span className='text-[#6e767d]'>
-              <strong className='text-white'>100</strong> Followers
-            </span>
-          </div>
-
-          <div className='absolute flex gap-2 top-3 right-4'>
-            <div className='relative flex flex-col items-center'>
-              <LuMoreHorizontal className='w-5 h-5 p-1 border border-white rounded-full cursor-pointer' />
-              <span className='absolute top-10 right-0 px-1 bg-[#6e767d] text-white text-xs opacity-0 invisible transition-opacity duration-200'>
-                More
-              </span>
-            </div>
-            <div className='relative flex flex-col items-center'>
-              <FaEnvelope className='w-5 h-5 p-1 border border-white rounded-full cursor-pointer' />
-              <span className='absolute top-10 right-0 px-1 bg-[#6e767d] text-white text-xs opacity-0 invisible transition-opacity duration-200'>
-                Message
-              </span>
-            </div>
-            <div className='relative flex flex-col items-center'>
-              {notify ? (
-                <FaRegBell className='w-5 h-5 p-1 border border-white rounded-full cursor-pointer' />
-              ) : (
-                <FaBellSlash className='w-5 h-5 p-1 border border-white rounded-full cursor-pointer' />
-              )}
-              <span className='absolute top-10 right-0 px-1 bg-[#6e767d] text-white text-xs opacity-0 invisible transition-opacity duration-200'>
-                {notify ? 'Notify' : 'Turn off Notify'}
-              </span>
-            </div>
-            <button className='px-7 py-1 rounded-full font-bold text-sm leading-5 hover:bg-[#d3d3d3]'>Follow</button>
-          </div>
+          <ProfileInfo
+            name={tweets?.name}
+            email={tweets?.email}
+            bio={tweets?.bio}
+            location={tweets?.location}
+            joinDate={moment(tweets?.created_at).format('DD/MM/YYYY')}
+            following={569}
+            followers={72}
+          />
         </div>
-      ))}
-    </div>
+        <ProfileTabs />
+        <div className='flex flex-col pl-px w-full max-w-[598px] max-md:max-w-full'>
+          {userId.map((tweet, index) => {
+            let parent
+            if (tweet?.tweet_children[0]) {
+              parent = { ...tweet?.tweet_children[0], user: tweet?.user[0] }
+              parent = {
+                ...parent,
+                id: parent._id,
+                author: parent.user.name,
+                handle: '@' + parent.user.username,
+                avatar: parent.user.avatar,
+                time: moment(parent.created_at).format('DD/MM/YYYY HH:mm'),
+                content: parent.content,
+                image: parent.medias[0]?.url || null,
+                stats: {
+                  comments: parent.comment_count,
+                  retweets: parent.retweet_count,
+                  likes: parent.likes,
+                  views: parent.bookmarks
+                }
+              }
+            }
+
+            return tweet?.tweet_children.length > 0 ? (
+              <ChildTweet key={index} setReload={setReload} reload={reload} parent={parent} {...tweet} />
+            ) : (
+              <Tweet key={index} setReload={setReload} reload={reload} {...tweet} />
+            )
+          })}
+        </div>
+      </div>
+    </main>
   )
 }
